@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">#2196f3</item>
+        <item name="colorPrimaryDark">#101418</item>
+        <item name="colorAccent">#2196f3</item>
+        <item name="android:windowBackground">#101418</item>
+        <item name="android:statusBarColor">#101418</item>
+    </style>
+
+    <!-- QR scanner theme -->
+    <style name="CustomBarcodeScannerTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">#000000</item>
+    </style>
+</resources>

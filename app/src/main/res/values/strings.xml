@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Runner Tracker</string>
+    <string name="notification_title">Tracking Race</string>
+    <string name="notification_text">Bib %s • GPS Active</string>
+    <string name="service_description">Track GPS location in background</string>
+    <string name="permission_rationale">Location permission needed for GPS tracking</string>
+</resources>

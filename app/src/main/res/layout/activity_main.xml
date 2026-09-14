@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal"
+    android:background="#101418">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🏃 Runner Tracker"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#ffffff"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS tracking + BLE checkpoint scanner"
+        android:textSize="13sp"
+        android:textColor="#8a97a3"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Bib Number -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bib Number"
+        android:textSize="15sp"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/etBibNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. 142"
+        android:inputType="number"
+        android:textSize="18sp"
+        android:textColor="#ffffff"
+        android:textColorHint="#556677"
+        android:backgroundTint="#445566"
+        android:padding="10dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Server URL -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Server URL"
+        android:textSize="15sp"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/etServerUrl"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="https://your-name.trycloudflare.com"
+            android:inputType="textUri"
+            android:textSize="13sp"
+            android:textColor="#ffffff"
+            android:textColorHint="#556677"
+            android:backgroundTint="#445566"
+            android:padding="10dp"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnScanQr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📷"
+            android:textSize="18sp"
+            android:backgroundTint="#2a5a5a"
+            android:padding="10dp" />
+
+    </LinearLayout>
+
+    <!-- Tag Map (for BLE checkpoint scanner) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BLE Tag Map (JSON: {tagId: bib})"
+        android:textSize="14sp"
+        android:textColor="#ffffff"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/etTagMap"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:hint='{"IB:uuid:1:1": "Bib 142"}'
+        android:gravity="top"
+        android:textSize="11sp"
+        android:textColor="#ffffff"
+        android:textColorHint="#556677"
+        android:backgroundTint="#445566"
+        android:padding="8dp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Status -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ready"
+        android:textSize="16sp"
+        android:textColor="#8a97a3"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Live log -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0a0c0e"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp">
+        
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Logs will appear here..."
+            android:textSize="10sp"
+            android:textColor="#4ade80"
+            android:fontFamily="monospace"
+            android:lineSpacingMultiplier="1.2" />
+    </ScrollView>
+
+    <!-- GPS Tracking Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+        
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="▶ TRACK GPS"
+            android:textSize="16sp"
+            android:textColor="#ffffff"
+            android:backgroundTint="#2196f3"
+            android:padding="14dp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⏹ STOP"
+            android:textSize="16sp"
+            android:textColor="#ffffff"
+            android:backgroundTint="#f44336"
+            android:padding="14dp"
+            android:layout_marginStart="4dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- BLE Checkpoint Scanner Button -->
+    <Button
+        android:id="@+id/btnCheckpoint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📡 CHECKPOINT SCANNER"
+        android:textSize="16sp"
+        android:textColor="#ffffff"
+        android:backgroundTint="#4caf50"
+        android:padding="14dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Live Map Button -->
+    <Button
+        android:id="@+id/btnViewMap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🗺️ LIVE MAP"
+        android:textSize="16sp"
+        android:textColor="#ffffff"
+        android:backgroundTint="#9c27b0"
+        android:padding="14dp"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>

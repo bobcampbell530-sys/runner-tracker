@@ -1,0 +1,39 @@
+# Build outputs
+app/build/
+ios/build/
+ios/**/*.xcodeproj/**
+ios/**/*.xcworkspace/**
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Gradle
+.gradle/
+
+# Android local properties (contains local SDK paths)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Demo/personal files
+*.png
+*.odt
+*.odp
+*.docx
+
+# APK (rebuild from source if needed)
+*.apk
+
+# Tag map (contains race-specific data)
+tagmap.json
+
+# OS files
+.DS_Store
+Thumbs.db

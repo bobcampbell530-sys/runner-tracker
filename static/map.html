@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Race Tracker — Control Room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  html, body { height:100%; margin:0; font-family:system-ui, sans-serif; }
+  #wrap { display:flex; height:100%; }
+  #map { flex:1; min-height:300px; }
+  #side { width:380px; background:#101418; color:#eee; overflow-y:auto; padding:14px; }
+  @media (max-width:768px) {
+    #wrap { flex-direction:column; }
+    #side { width:100%; height:auto; max-height:40vh; }
+    #map { flex:1; min-height:50vh; }
+  }
+  #qr-section { background:#1a2026; border-radius:12px; padding:20px; margin-bottom:14px; text-align:center; border:3px solid #3a8a6a; background: radial-gradient(circle, #283838 0%, #1a2026 100%); }
+  #qr-section h3 { margin:0 0 6px; color:#6ab; font-size:1.1em; font-weight:bold; }
+  #qr-section .hint { color:#8a97a3; font-size:.82em; margin-bottom:12px; }
+  #qr-img { max-width:300px; border:6px solid #fff; border-radius:8px; box-shadow: 0 0 15px rgba(0,0,0,0.4); }
+  #qr-url { font-family:monospace; font-size:.72em; color:#6a8; word-break:break-all; margin-top:8px; }
+  #qr-bib { width:60px; background:#2a3038; border:1px solid #3a4048; color:#eee; padding:4px; border-radius:4px; text-align:center; font-size:.85em; }
+  h2 { font-size:1em; margin:6px 0 10px; color:#8ab; }
+  .runner { background:#1a2026; border-radius:8px; padding:8px 10px; margin-bottom:6px;
+            cursor:pointer; font-size:.85em; }
+  .runner:hover { background:#232b33; }
+  .runner .nm { font-weight:bold; }
+  .runner .meta { color:#8a97a3; font-size:.9em; }
+  .stale { opacity:.45; }
+  table { width:100%; border-collapse:collapse; font-size:.78em; }
+  td, th { text-align:left; padding:2px 4px; border-bottom:1px solid #2a3038; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+  #clock { color:#678; font-size:.85em; text-align:right; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="map"></div>
+  <div id="side">
+    <div id="clock"></div>
+    <!-- QR Code for runners -->
+    <div id="qr-section">
+      <h3>🏃 Scan to configure app</h3>
+      <div class="hint">Open Runner Tracker app and scan this QR code. Your bib number will be filled in automatically.</div>
+      <input type="text" id="qr-bib" value="008" maxlength="10" placeholder="Bib">
+      <img id="qr-img" src="" alt="QR Code">
+      <div id="qr-url"></div>
+    </div>
+    <div style="text-align:center; margin: 10px 0;">
+      <button onclick="resetMap()" style="background:#c0392b;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:.85em;">🗑 Reset Map</button>
+    </div>
+    <h2>RUNNERS</h2>
+    <div id="runners"></div>
+    <h2>CHECKPOINTS</h2>
+    <div id="checkpoints"><em>none yet</em></div>
+  </div>
+</div>
+<script>
+const COLORS = ["#e53935","#1e88e5","#43a047","#fb8c00","#8e24aa",
+                "#00acc1","#fdd835","#5e35b1","#00c853","#d81b60",
+                "#3949ab","#c0ca33","#6d4c41","#546e7a"];
+
+// Reset map button
+async function resetMap() {
+  if (!confirm("Clear all runners, tracks, and checkpoints?")) return;
+  try {
+    await fetch("/api/runners", { method: "DELETE" });
+    refresh();
+  } catch(e) { alert("Reset failed: " + e); }
+}
+
+const map = L.map("map").setView([46.0, -121.5], 9);   // adjust to your race area
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {maxZoom: 19, attribution: "© OpenStreetMap contributors"}).addTo(map);
+
+// optional course overlay: course.gpx next to server.py
+fetch("/course.gpx").then(r => r.ok ? r.text() : null).then(txt => {
+  if (!txt) return;
+  const doc = new DOMParser().parseFromString(txt, "text/xml");
+  const pts = [...doc.getElementsByTagName("trkpt")]
+    .map(p => [parseFloat(p.getAttribute("lat")), parseFloat(p.getAttribute("lon"))]);
+  if (pts.length) {
+    L.polyline(pts, {color: "#fff", weight: 3, opacity: .7, dashArray: "6 8"})
+      .addTo(map);
+    map.fitBounds(L.polyline(pts).getBounds().pad(.2));
+  }
+});
+
+const markers = {}, polylines = {};
+let first = true;
+
+async function refresh() {
+  try {
+    const data = await (await fetch("/api/runners")).json();
+    const now = Date.now() / 1000;
+
+    const list = document.getElementById("runners");
+    list.innerHTML = "";
+    for (const r of data.runners) {
+      if (!r.last) continue;
+      const i = r.name;
+      const color = COLORS[hash(i) % COLORS.length];
+      const age = now - r.last.ts;
+      const stale = age > 300;
+
+      // marker
+      if (!markers[i]) {
+        markers[i] = L.marker([r.last.lat, r.last.lng], {
+          icon: L.divIcon({className: "", html:
+            `<div style="background:${color};border:2px solid #fff;border-radius:50%;
+              width:14px;height:14px;"></div>`, iconSize: [14, 14]})
+        }).addTo(map).bindTooltip(i, {permanent: true, direction: "top",
+          offset: [0, -8], className: "rname"});
+        polylines[i] = L.polyline([], {color, weight: 3, opacity: .8}).addTo(map);
+      }
+      markers[i].setLatLng([r.last.lat, r.last.lng]);
+      if (r.track) polylines[i].setLatLngs(r.track.map(p => [p.lat, p.lng]));
+
+      const div = document.createElement("div");
+      div.className = "runner" + (stale ? " stale" : "");
+      div.innerHTML = `<span class="dot" style="background:${color}"></span>` +
+        `<span class="nm">${i}</span><br>` +
+        `<span class="meta">${stale ? "⚠ " : ""}${fmtAge(age)} ago &nbsp;` +
+        `${(r.last.alt ?? 0) | 0} m &nbsp; ${((r.last.speed ?? 0) * 3.6).toFixed(0)} km/h</span>`;
+      div.onclick = () => map.setView([r.last.lat, r.last.lng], 13);
+      list.appendChild(div);
+
+      if (first) map.fitBounds(
+        L.latLngBounds(data.runners.filter(x => x.last)
+          .map(x => [x.last.lat, x.last.lng])).pad(.3));
+    }
+    for (const i of Object.keys(markers))
+      if (!data.runners.find(r => r.name === i)) {
+        markers[i].remove(); polylines[i].remove();
+        delete markers[i]; delete polylines[i];
+      }
+    first = false;
+
+    // checkpoints
+    const cp = document.getElementById("checkpoints");
+    if (data.checkpoints.length) {
+      cp.innerHTML = "<table>" + data.checkpoints.slice(-40).reverse().map(e =>
+        `<tr><td>${new Date(e.ts * 1000).toLocaleTimeString()}</td>` +
+        `<td>${e.name}</td><td>${e.station}</td></tr>`).join("") + "</table>";
+    }
+    document.getElementById("clock").textContent =
+      `updated ${new Date().toLocaleTimeString()}`;
+  } catch (e) { /* server unreachable */ }
+}
+
+// QR code generation - lightweight inline implementation
+const QRCode = (() => {
+  // Minimal QR code generator using an external API for reliability
+  // (inline QR generation would add 10KB+ to this file)
+  return {
+    generate(data, size = 300) {
+      // Data is already URL-encoded (runnertracker://setup?url=...&bib=...)
+      // Just pass it through directly
+      return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${data}&bgcolor=ffffff&color=000000`;
+    }
+  };
+})();
+
+function updateQRCode() {
+  const bib = document.getElementById("qr-bib").value || "008";
+  // Auto-detect current server URL from the page's origin
+  const serverUrl = window.location.origin;
+  // Encode as runnertracker:// deep link
+  const qrData = `runnertracker://setup?url=${encodeURIComponent(serverUrl)}&bib=${encodeURIComponent(bib)}`;
+  const qrImg = document.getElementById("qr-img");
+  const qrUrl = document.getElementById("qr-url");
+  qrImg.src = QRCode.generate(qrData, 300);
+  qrUrl.textContent = `runnertracker://setup?url=${serverUrl}&bib=${bib}`;
+}
+
+// Update QR code whenever bib changes
+const bibInput = document.getElementById("qr-bib");
+if (bibInput) bibInput.addEventListener("input", updateQRCode);
+
+// Generate QR code on page load
+updateQRCode();
+
+function hash(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
+function fmtAge(s) {
+  if (s < 60) return s.toFixed(0) + " s";
+  if (s < 3600) return (s / 60).toFixed(0) + " min";
+  return (s / 3600).toFixed(1) + " h";
+}
+refresh();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>

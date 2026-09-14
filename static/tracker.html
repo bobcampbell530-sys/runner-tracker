@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Runner Tracker</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#101418; color:#eee;
+         display:flex; flex-direction:column; align-items:center; padding:24px; }
+  h1 { font-size:1.3em; margin-bottom:4px; }
+  #status { font-size:1.6em; font-weight:bold; margin:18px 0; }
+  .ok { color:#4caf50; } .warn { color:#ff9800; } .bad { color:#f44336; }
+  #detail { color:#9aa; font-size:.9em; text-align:center; line-height:1.6; }
+  button { font-size:1.1em; padding:12px 28px; margin-top:18px; border-radius:10px;
+           border:0; background:#2196f3; color:white; }
+  input { font-size:1.1em; padding:10px; border-radius:8px; border:0; width:80vw;
+          margin-top:10px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>🏃 Runner Tracker</h1>
+<div id="status" class="warn">starting…</div>
+<div id="detail">Loading GPS…</div>
+<button id="start">START TRACKING</button>
+<div id="manual" style="display:none">
+  <input id="name" placeholder="your name / bib number">
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+let NAME = params.get("name");
+const INTERVAL = 20000;              // send every 20 s
+let timer = null, lastSent = 0, watchId = null;
+let wakeLock = null;
+
+const status = document.getElementById("status");
+const detail = document.getElementById("detail");
+
+async function requestWakeLock() {
+  try {
+    if (navigator.wakeLock) {
+      wakeLock = await navigator.wakeLock.request("screen");
+      status.textContent = "📍 tracking " + NAME + " | screen ON";
+      wakeLock.addEventListener("release", () => {
+        wakeLock = null;
+        // Try again if released (screen dimmed)
+        requestWakeLock();
+      });
+    }
+  } catch (e) {
+    // Wake Lock not supported — will still track, but screen may dim
+    console.log("Wake Lock not available:", e.message);
+  }
+}
+
+document.getElementById("start").onclick = async () => {
+  if (!NAME) {
+    document.getElementById("manual").style.display = "block";
+    return;
+  }
+  NAME = document.getElementById("name").value.trim() || NAME;
+  if (!NAME) return;
+  document.getElementById("start").style.display = "none";
+  watchId = navigator.geolocation.watchPosition(onPos, onErr, {
+    enableHighAccuracy: true, maximumAge: 5000, timeout: 15000
+  });
+  timer = setInterval(() => sendLast(), INTERVAL);
+  await requestWakeLock();
+  status.className = "warn";
+  status.textContent = "📡 acquiring GPS…";
+};
+
+let last = null;
+function onPos(p) {
+  last = p;
+  status.className = "ok";
+  status.textContent = "📍 tracking " + NAME;
+  detail.innerHTML =
+    `lat ${p.coords.latitude.toFixed(6)}<br>lng ${p.coords.longitude.toFixed(6)}<br>` +
+    `altitude ${Math.round(p.coords.altitude ?? 0)} m &nbsp; acc ±${Math.round(p.coords.accuracy ?? 0)} m<br>` +
+    `last sent: ${new Date(lastSent).toLocaleTimeString()}`;
+  sendLast();
+}
+function onErr(e) {
+  status.className = "bad";
+  status.textContent = "⚠ GPS error";
+  detail.textContent = e.message + " — stay outside, keep screen on";
+}
+
+// Re-acquire wake lock if page comes back into view
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && NAME && timer) {
+    requestWakeLock();
+  }
+});
+
+async function sendLast() {
+  if (!last) return;
+  const body = {
+    name: NAME,
+    lat: last.coords.latitude,
+    lng: last.coords.longitude,
+    alt: last.coords.altitude || 0,
+    acc: last.coords.accuracy || 0,
+    speed: last.coords.speed || 0,
+    ts: Date.now() / 1000
+  };
+  try {
+    const r = await fetch("/api/ping", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      lastSent = Date.now();
+      detail.innerHTML += "<br>✅ pinged (" +
+        (await r.json()).runners_online + " online)";
+    }
+  } catch (e) {
+    detail.textContent = "offline — will retry next ping";
+  }
+}
+</script>
+</body>
+</html>

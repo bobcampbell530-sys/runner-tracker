@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#2196f3</color>
+    <color name="button_blue">#2196f3</color>
+    <color name="button_red">#f44336</color>
+    <color name="button_green">#4caf50</color>
+</resources>
